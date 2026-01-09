@@ -4,6 +4,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Github, Twitter, Linkedin } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
@@ -38,9 +40,14 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/api/docs" className="hover:text-foreground transition-colors">
+                <a
+                  href={`${API_URL}/api/docs`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-foreground transition-colors"
+                >
                   API Documentation
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
