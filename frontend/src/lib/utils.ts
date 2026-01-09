@@ -5,8 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date | string): string {
-  const now = new Date();
+export function formatDate(date: Date | string, relative: boolean = true): string {
   const d = new Date(date);
 
   // Handle invalid dates
@@ -14,6 +13,19 @@ export function formatDate(date: Date | string): string {
     return String(date);
   }
 
+  const formatAbsolute = () =>
+    d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+
+  // Return absolute date format if relative is disabled
+  if (!relative) {
+    return formatAbsolute();
+  }
+
+  const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const isFuture = diffMs < 0;
   const absDiffMs = Math.abs(diffMs);
@@ -25,11 +37,7 @@ export function formatDate(date: Date | string): string {
   // Future dates (e.g., expiration)
   if (isFuture) {
     if (absDiffDays >= 7) {
-      return d.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+      return formatAbsolute();
     }
     if (absDiffDays >= 1) {
       return `in ${absDiffDays} ${absDiffDays === 1 ? "day" : "days"}`;
@@ -57,11 +65,7 @@ export function formatDate(date: Date | string): string {
     return `${absDiffDays} ${absDiffDays === 1 ? "day" : "days"} ago`;
   }
 
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatAbsolute();
 }
 
 export function formatNumber(num: number): string {

@@ -271,7 +271,7 @@ export default function DashboardPage() {
                                 <BarChart3 className="w-3 h-3" />
                                 {formatNumber(url.clicks)} clicks
                               </span>
-                              <span>Created {formatDate(url.created_at)}</span>
+                              <span>Created on {formatDate(url.created_at, false)}</span>
                               {url.expiration && (
                                 <span className="text-yellow-500">
                                   Expires {formatDate(url.expiration)}
