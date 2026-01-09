@@ -60,8 +60,6 @@ async def health_check():
     return {"status": "healthy", "service": settings.APP_NAME}
 
 
-# Import and include routers (will be added as we implement each feature)
-# from app.api import auth, urls, analytics
-# app.include_router(auth.router, prefix=settings.API_V1_STR, tags=["auth"])
-# app.include_router(urls.router, prefix=settings.API_V1_STR, tags=["urls"])
-# app.include_router(analytics.router, prefix=settings.API_V1_STR, tags=["analytics"])
+# Import and include routers
+from app.api import auth
+app.include_router(auth.router, prefix=settings.API_V1_STR)

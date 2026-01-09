@@ -70,3 +70,5 @@ dump.rdb
 # Coverage
 coverage/
 *.lcov
+EclipseURL/
+.claude/
