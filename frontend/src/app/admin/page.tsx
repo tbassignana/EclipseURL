@@ -273,7 +273,7 @@ export default function AdminDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Calendar className="w-5 h-5" />
-                  Today's Activity
+                  Today&apos;s Activity
                 </CardTitle>
               </CardHeader>
               <CardContent>

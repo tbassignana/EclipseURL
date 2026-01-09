@@ -1,7 +1,8 @@
-from beanie import Document, Indexed, Link
-from pydantic import Field, ConfigDict
 from datetime import datetime
-from typing import Optional
+
+from beanie import Document, Indexed, Link
+from pydantic import ConfigDict, Field
+
 from app.models.user import User
 
 
@@ -12,7 +13,7 @@ class ShortURL(Document):
                 "original_url": "https://example.com/very/long/url",
                 "short_code": "abc123",
                 "clicks": 0,
-                "is_active": True
+                "is_active": True,
             }
         }
     )
@@ -20,17 +21,17 @@ class ShortURL(Document):
     original_url: str
     short_code: Indexed(str, unique=True)
     user: Link[User]
-    custom_alias: Optional[str] = None
+    custom_alias: str | None = None
     clicks: int = 0
-    expiration: Optional[datetime] = None
+    expiration: datetime | None = None
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     # URL Preview metadata
-    preview_title: Optional[str] = None
-    preview_description: Optional[str] = None
-    preview_image: Optional[str] = None
+    preview_title: str | None = None
+    preview_description: str | None = None
+    preview_image: str | None = None
 
     class Settings:
         name = "short_urls"

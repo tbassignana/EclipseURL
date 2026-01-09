@@ -40,6 +40,7 @@ ignore = [
     "E501",  # line too long, handled by black
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
+    "I001",  # import sorting handled by standalone isort in CI
 ]
 
 [tool.pytest.ini_options]

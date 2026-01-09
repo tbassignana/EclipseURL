@@ -1,19 +1,22 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.core.config import settings
 from app.core.security import get_current_user
-from app.schemas.url import URLCreate, URLResponse, URLPreview, URLStats
+from app.models.url import ShortURL
+from app.models.user import User
+from app.schemas.url import URLCreate, URLPreview, URLResponse, URLStats
 from app.services.url import (
     create_short_url,
-    get_short_url_by_code,
-    get_user_urls,
     delete_short_url,
-    fetch_url_preview as fetch_preview_service,
-    get_url_stats
 )
-from app.models.user import User
+from app.services.url import fetch_url_preview as fetch_preview_service
+from app.services.url import (
+    get_short_url_by_code,
+    get_url_stats,
+    get_user_urls,
+)
 
 router = APIRouter(prefix="/urls", tags=["URLs"])
 limiter = Limiter(key_func=get_remote_address)
@@ -22,9 +25,7 @@ limiter = Limiter(key_func=get_remote_address)
 @router.post("/shorten", response_model=URLResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(settings.RATE_LIMIT_SHORTEN)
 async def shorten_url(
-    request: Request,
-    url_data: URLCreate,
-    current_user: User = Depends(get_current_user)
+    request: Request, url_data: URLCreate, current_user: User = Depends(get_current_user)
 ):
     """
     Create a shortened URL.
@@ -36,10 +37,7 @@ async def shorten_url(
     try:
         short_url = await create_short_url(url_data, current_user)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     return URLResponse(
         id=str(short_url.id),
@@ -51,15 +49,13 @@ async def shorten_url(
         created_at=short_url.created_at,
         preview_title=short_url.preview_title,
         preview_description=short_url.preview_description,
-        preview_image=short_url.preview_image
+        preview_image=short_url.preview_image,
     )
 
 
 @router.get("", response_model=list[URLResponse])
 async def list_user_urls(
-    current_user: User = Depends(get_current_user),
-    skip: int = 0,
-    limit: int = 100
+    current_user: User = Depends(get_current_user), skip: int = 0, limit: int = 100
 ):
     """
     List all URLs created by the current user.
@@ -77,7 +73,7 @@ async def list_user_urls(
             created_at=url.created_at,
             preview_title=url.preview_title,
             preview_description=url.preview_description,
-            preview_image=url.preview_image
+            preview_image=url.preview_image,
         )
         for url in urls
     ]
@@ -93,56 +89,42 @@ async def get_url_preview(url: str):
 
 
 @router.get("/{short_code}/stats", response_model=URLStats)
-async def get_url_statistics(
-    short_code: str,
-    current_user: User = Depends(get_current_user)
-):
+async def get_url_statistics(short_code: str, current_user: User = Depends(get_current_user)):
     """
     Get detailed statistics for a shortened URL.
     """
     short_url = await get_short_url_by_code(short_code)
 
     if not short_url or not short_url.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="URL not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="URL not found")
 
     # Verify ownership (unless admin)
     if not current_user.is_admin:
         await short_url.fetch_link(ShortURL.user)
         if short_url.user.id != current_user.id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this URL"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this URL"
             )
 
     return await get_url_stats(short_url)
 
 
 @router.get("/{short_code}", response_model=URLResponse)
-async def get_url_details(
-    short_code: str,
-    current_user: User = Depends(get_current_user)
-):
+async def get_url_details(short_code: str, current_user: User = Depends(get_current_user)):
     """
     Get details of a specific shortened URL.
     """
     short_url = await get_short_url_by_code(short_code)
 
     if not short_url or not short_url.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="URL not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="URL not found")
 
     # Verify ownership (unless admin)
     if not current_user.is_admin:
         await short_url.fetch_link(ShortURL.user)
         if short_url.user.id != current_user.id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this URL"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this URL"
             )
 
     return URLResponse(
@@ -155,15 +137,12 @@ async def get_url_details(
         created_at=short_url.created_at,
         preview_title=short_url.preview_title,
         preview_description=short_url.preview_description,
-        preview_image=short_url.preview_image
+        preview_image=short_url.preview_image,
     )
 
 
 @router.delete("/{short_code}", status_code=status.HTTP_200_OK)
-async def delete_url(
-    short_code: str,
-    current_user: User = Depends(get_current_user)
-):
+async def delete_url(short_code: str, current_user: User = Depends(get_current_user)):
     """
     Delete a shortened URL (soft delete).
     """
@@ -171,12 +150,7 @@ async def delete_url(
 
     if not success:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="URL not found or not authorized"
+            status_code=status.HTTP_404_NOT_FOUND, detail="URL not found or not authorized"
         )
 
     return {"message": "URL deleted successfully"}
-
-
-# Import ShortURL for fetch_link
-from app.models.url import ShortURL

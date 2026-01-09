@@ -1,12 +1,11 @@
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
+from app.core.security import get_password_hash, verify_password
 from app.models.user import User
 from app.schemas.user import UserCreate
-from app.core.security import get_password_hash, verify_password
 
 
-async def get_user_by_email(email: str) -> Optional[User]:
+async def get_user_by_email(email: str) -> User | None:
     """Find a user by their email address."""
     return await User.find_one({"email": email})
 
@@ -18,14 +17,14 @@ async def create_user(user_data: UserCreate) -> User:
     user = User(
         email=user_data.email,
         hashed_password=hashed_password,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(UTC),
     )
 
     await user.insert()
     return user
 
 
-async def authenticate_user(email: str, password: str) -> Optional[User]:
+async def authenticate_user(email: str, password: str) -> User | None:
     """Authenticate a user by email and password."""
     user = await get_user_by_email(email)
     if not user:

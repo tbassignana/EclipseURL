@@ -1,13 +1,15 @@
 """Tests for URL shortening endpoints."""
-import pytest
-from httpx import AsyncClient, ASGITransport
-from unittest.mock import AsyncMock, patch, MagicMock
-from datetime import datetime, timezone
 
-from app.main import app
-from app.models.user import User
-from app.models.url import ShortURL
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
 from app.core.security import create_access_token
+from app.main import app
+from app.models.url import ShortURL
+from app.models.user import User
 from app.services.url import generate_short_code, is_valid_custom_alias
 
 
@@ -19,7 +21,7 @@ def mock_user():
     user.email = "test@example.com"
     user.is_active = True
     user.is_admin = False
-    user.created_at = datetime.now(timezone.utc)
+    user.created_at = datetime.now(UTC)
     return user
 
 
@@ -39,7 +41,7 @@ def mock_short_url(mock_user):
     url.clicks = 0
     url.is_active = True
     url.expiration = None
-    url.created_at = datetime.now(timezone.utc)
+    url.created_at = datetime.now(UTC)
     url.preview_title = "Example Site"
     url.preview_description = "Example description"
     url.preview_image = "https://example.com/image.png"
@@ -108,8 +110,8 @@ class TestShortenEndpoint:
     @pytest.mark.asyncio
     async def test_shorten_url_success(self, mock_user, auth_token):
         """Test successful URL shortening."""
-        with patch('app.core.security.User.find_one', new_callable=AsyncMock) as mock_find:
-            with patch('app.api.urls.create_short_url', new_callable=AsyncMock) as mock_create:
+        with patch("app.core.security.User.find_one", new_callable=AsyncMock) as mock_find:
+            with patch("app.api.urls.create_short_url", new_callable=AsyncMock) as mock_create:
                 mock_find.return_value = mock_user
                 mock_short = MagicMock()
                 mock_short.id = "607f1f77bcf86cd799439022"
@@ -117,7 +119,7 @@ class TestShortenEndpoint:
                 mock_short.short_code = "abc123x"
                 mock_short.clicks = 0
                 mock_short.expiration = None
-                mock_short.created_at = datetime.now(timezone.utc)
+                mock_short.created_at = datetime.now(UTC)
                 mock_short.preview_title = None
                 mock_short.preview_description = None
                 mock_short.preview_image = None
@@ -128,7 +130,7 @@ class TestShortenEndpoint:
                     response = await client.post(
                         "/api/v1/urls/shorten",
                         json={"original_url": "https://example.com/long"},
-                        headers={"Authorization": f"Bearer {auth_token}"}
+                        headers={"Authorization": f"Bearer {auth_token}"},
                     )
 
                 assert response.status_code == 201
@@ -139,8 +141,8 @@ class TestShortenEndpoint:
     @pytest.mark.asyncio
     async def test_shorten_url_with_custom_alias(self, mock_user, auth_token):
         """Test URL shortening with custom alias."""
-        with patch('app.core.security.User.find_one', new_callable=AsyncMock) as mock_find:
-            with patch('app.api.urls.create_short_url', new_callable=AsyncMock) as mock_create:
+        with patch("app.core.security.User.find_one", new_callable=AsyncMock) as mock_find:
+            with patch("app.api.urls.create_short_url", new_callable=AsyncMock) as mock_create:
                 mock_find.return_value = mock_user
                 mock_short = MagicMock()
                 mock_short.id = "607f1f77bcf86cd799439022"
@@ -148,7 +150,7 @@ class TestShortenEndpoint:
                 mock_short.short_code = "myalias"
                 mock_short.clicks = 0
                 mock_short.expiration = None
-                mock_short.created_at = datetime.now(timezone.utc)
+                mock_short.created_at = datetime.now(UTC)
                 mock_short.preview_title = None
                 mock_short.preview_description = None
                 mock_short.preview_image = None
@@ -160,9 +162,9 @@ class TestShortenEndpoint:
                         "/api/v1/urls/shorten",
                         json={
                             "original_url": "https://example.com/long",
-                            "custom_alias": "myalias"
+                            "custom_alias": "myalias",
                         },
-                        headers={"Authorization": f"Bearer {auth_token}"}
+                        headers={"Authorization": f"Bearer {auth_token}"},
                     )
 
                 assert response.status_code == 201
@@ -175,8 +177,7 @@ class TestShortenEndpoint:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
-                "/api/v1/urls/shorten",
-                json={"original_url": "https://example.com/long"}
+                "/api/v1/urls/shorten", json={"original_url": "https://example.com/long"}
             )
 
         assert response.status_code == 401
@@ -188,16 +189,15 @@ class TestListURLsEndpoint:
     @pytest.mark.asyncio
     async def test_list_urls_success(self, mock_user, auth_token, mock_short_url):
         """Test listing user's URLs."""
-        with patch('app.core.security.User.find_one', new_callable=AsyncMock) as mock_find:
-            with patch('app.api.urls.get_user_urls', new_callable=AsyncMock) as mock_list:
+        with patch("app.core.security.User.find_one", new_callable=AsyncMock) as mock_find:
+            with patch("app.api.urls.get_user_urls", new_callable=AsyncMock) as mock_list:
                 mock_find.return_value = mock_user
                 mock_list.return_value = [mock_short_url]
 
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
                     response = await client.get(
-                        "/api/v1/urls",
-                        headers={"Authorization": f"Bearer {auth_token}"}
+                        "/api/v1/urls", headers={"Authorization": f"Bearer {auth_token}"}
                     )
 
                 assert response.status_code == 200
@@ -208,16 +208,15 @@ class TestListURLsEndpoint:
     @pytest.mark.asyncio
     async def test_list_urls_empty(self, mock_user, auth_token):
         """Test listing URLs when user has none."""
-        with patch('app.core.security.User.find_one', new_callable=AsyncMock) as mock_find:
-            with patch('app.api.urls.get_user_urls', new_callable=AsyncMock) as mock_list:
+        with patch("app.core.security.User.find_one", new_callable=AsyncMock) as mock_find:
+            with patch("app.api.urls.get_user_urls", new_callable=AsyncMock) as mock_list:
                 mock_find.return_value = mock_user
                 mock_list.return_value = []
 
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
                     response = await client.get(
-                        "/api/v1/urls",
-                        headers={"Authorization": f"Bearer {auth_token}"}
+                        "/api/v1/urls", headers={"Authorization": f"Bearer {auth_token}"}
                     )
 
                 assert response.status_code == 200
@@ -231,16 +230,15 @@ class TestDeleteURLEndpoint:
     @pytest.mark.asyncio
     async def test_delete_url_success(self, mock_user, auth_token):
         """Test successful URL deletion."""
-        with patch('app.core.security.User.find_one', new_callable=AsyncMock) as mock_find:
-            with patch('app.api.urls.delete_short_url', new_callable=AsyncMock) as mock_delete:
+        with patch("app.core.security.User.find_one", new_callable=AsyncMock) as mock_find:
+            with patch("app.api.urls.delete_short_url", new_callable=AsyncMock) as mock_delete:
                 mock_find.return_value = mock_user
                 mock_delete.return_value = True
 
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
                     response = await client.delete(
-                        "/api/v1/urls/abc123x",
-                        headers={"Authorization": f"Bearer {auth_token}"}
+                        "/api/v1/urls/abc123x", headers={"Authorization": f"Bearer {auth_token}"}
                     )
 
                 assert response.status_code == 200
@@ -250,8 +248,8 @@ class TestDeleteURLEndpoint:
     @pytest.mark.asyncio
     async def test_delete_url_not_found(self, mock_user, auth_token):
         """Test deleting a non-existent URL."""
-        with patch('app.core.security.User.find_one', new_callable=AsyncMock) as mock_find:
-            with patch('app.api.urls.delete_short_url', new_callable=AsyncMock) as mock_delete:
+        with patch("app.core.security.User.find_one", new_callable=AsyncMock) as mock_find:
+            with patch("app.api.urls.delete_short_url", new_callable=AsyncMock) as mock_delete:
                 mock_find.return_value = mock_user
                 mock_delete.return_value = False
 
@@ -259,7 +257,7 @@ class TestDeleteURLEndpoint:
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
                     response = await client.delete(
                         "/api/v1/urls/nonexistent",
-                        headers={"Authorization": f"Bearer {auth_token}"}
+                        headers={"Authorization": f"Bearer {auth_token}"},
                     )
 
                 assert response.status_code == 404
@@ -271,20 +269,20 @@ class TestPreviewEndpoint:
     @pytest.mark.asyncio
     async def test_preview_url(self):
         """Test fetching URL preview metadata."""
-        with patch('app.api.urls.fetch_preview_service', new_callable=AsyncMock) as mock_preview:
+        with patch("app.api.urls.fetch_preview_service", new_callable=AsyncMock) as mock_preview:
             from app.schemas.url import URLPreview
+
             mock_preview.return_value = URLPreview(
                 title="Example Site",
                 description="Example description",
                 image="https://example.com/image.png",
-                url="https://example.com"
+                url="https://example.com",
             )
 
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 response = await client.get(
-                    "/api/v1/urls/preview",
-                    params={"url": "https://example.com"}
+                    "/api/v1/urls/preview", params={"url": "https://example.com"}
                 )
 
             assert response.status_code == 200
