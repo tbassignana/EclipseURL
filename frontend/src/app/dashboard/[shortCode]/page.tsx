@@ -138,8 +138,10 @@ export default function UrlStatsPage() {
     }
   };
 
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const shortUrl = stats ? `${baseUrl}/${stats.short_code}` : "";
+  // Construct the redirect URL using the backend base (not the frontend)
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const backendBase = apiBase.replace("/api/v1", "");
+  const shortUrl = stats ? `${backendBase}/${stats.short_code}` : "";
 
   if (isLoading) {
     return (

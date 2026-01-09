@@ -8,26 +8,53 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDate(date: Date | string): string {
   const now = new Date();
   const d = new Date(date);
-  const diffMs = now.getTime() - d.getTime();
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
 
-  if (diffSeconds < 5) {
+  // Handle invalid dates
+  if (isNaN(d.getTime())) {
+    return String(date);
+  }
+
+  const diffMs = now.getTime() - d.getTime();
+  const isFuture = diffMs < 0;
+  const absDiffMs = Math.abs(diffMs);
+  const absDiffSeconds = Math.floor(absDiffMs / 1000);
+  const absDiffMinutes = Math.floor(absDiffSeconds / 60);
+  const absDiffHours = Math.floor(absDiffMinutes / 60);
+  const absDiffDays = Math.floor(absDiffHours / 24);
+
+  // Future dates (e.g., expiration)
+  if (isFuture) {
+    if (absDiffDays >= 7) {
+      return d.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+    if (absDiffDays >= 1) {
+      return `in ${absDiffDays} ${absDiffDays === 1 ? "day" : "days"}`;
+    }
+    if (absDiffHours >= 1) {
+      return `in ${absDiffHours} ${absDiffHours === 1 ? "hour" : "hours"}`;
+    }
+    return "soon";
+  }
+
+  // Past dates
+  if (absDiffSeconds < 5) {
     return "just now";
   }
-  if (diffSeconds < 60) {
-    return `${diffSeconds} ${diffSeconds === 1 ? "second" : "seconds"} ago`;
+  if (absDiffSeconds < 60) {
+    return `${absDiffSeconds} ${absDiffSeconds === 1 ? "second" : "seconds"} ago`;
   }
-  if (diffMinutes < 60) {
-    return `${diffMinutes} ${diffMinutes === 1 ? "minute" : "minutes"} ago`;
+  if (absDiffMinutes < 60) {
+    return `${absDiffMinutes} ${absDiffMinutes === 1 ? "minute" : "minutes"} ago`;
   }
-  if (diffHours < 24) {
-    return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+  if (absDiffHours < 24) {
+    return `${absDiffHours} ${absDiffHours === 1 ? "hour" : "hours"} ago`;
   }
-  if (diffDays < 7) {
-    return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+  if (absDiffDays < 7) {
+    return `${absDiffDays} ${absDiffDays === 1 ? "day" : "days"} ago`;
   }
 
   return d.toLocaleDateString("en-US", {
