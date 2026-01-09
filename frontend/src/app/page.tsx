@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Link2, BarChart3, Shield, Zap, Globe, Clock } from "lucide-react";
+import { Link2, BarChart3, Shield, Zap, Globe, Clock, LayoutDashboard } from "lucide-react";
+import { useAuthContext } from "@/context/AuthContext";
 
 const features = [
   {
@@ -56,6 +57,8 @@ const itemVariants = {
 };
 
 export default function Home() {
+  const { isAuthenticated } = useAuthContext();
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -72,11 +75,15 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             className="text-center"
           >
-            {/* Placeholder logo - PNG: 200x50, neon blue scissor icon cutting through a glowing URL chain link, modern minimalist style */}
             <div className="flex justify-center mb-8">
-              <div className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
-                Eclipse<span className="text-primary">URL</span>
-              </div>
+              <Image
+                src="/EclipseURL.png"
+                alt="EclipseURL Logo"
+                width={800}
+                height={300}
+                priority
+                className="h-auto"
+              />
             </div>
 
             <motion.h1
@@ -106,26 +113,47 @@ export default function Home() {
               transition={{ delay: 0.4 }}
               className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link href="/register">
-                <Button variant="gradient" size="lg" className="w-full sm:w-auto text-lg px-8 py-6">
-                  Get Started Free
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto text-lg px-8 py-6">
-                  Sign In
-                </Button>
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link href="/shorten">
+                    <Button variant="gradient" size="lg" className="w-full sm:w-auto text-lg px-8 py-6">
+                      <Link2 className="w-5 h-5 mr-2" />
+                      Shorten URL
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard">
+                    <Button variant="outline" size="lg" className="w-full sm:w-auto text-lg px-8 py-6">
+                      <LayoutDashboard className="w-5 h-5 mr-2" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/register">
+                    <Button variant="gradient" size="lg" className="w-full sm:w-auto text-lg px-8 py-6">
+                      Get Started Free
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button variant="outline" size="lg" className="w-full sm:w-auto text-lg px-8 py-6">
+                      Sign In
+                    </Button>
+                  </Link>
+                </>
+              )}
             </motion.div>
 
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-4 text-sm text-muted-foreground"
-            >
-              No credit card required
-            </motion.p>
+            {!isAuthenticated && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-4 text-sm text-muted-foreground"
+              >
+                No credit card required
+              </motion.p>
+            )}
           </motion.div>
         </div>
       </section>
@@ -213,14 +241,16 @@ export default function Home() {
             viewport={{ once: true }}
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Ready to supercharge your links?
+              {isAuthenticated ? "Ready to create your next link?" : "Ready to supercharge your links?"}
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Join thousands of businesses using EclipseURL to track and optimize their marketing campaigns.
+              {isAuthenticated
+                ? "Head to the shortener to create a new trackable link in seconds."
+                : "Join thousands of businesses using EclipseURL to track and optimize their marketing campaigns."}
             </p>
-            <Link href="/register">
+            <Link href={isAuthenticated ? "/shorten" : "/register"}>
               <Button variant="gradient" size="lg" className="text-lg px-8 py-6">
-                Start Shortening Now
+                {isAuthenticated ? "Create Short Link" : "Start Shortening Now"}
               </Button>
             </Link>
           </motion.div>

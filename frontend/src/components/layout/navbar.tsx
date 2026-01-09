@@ -3,43 +3,54 @@
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
-import { Sun, Moon, Menu, X, Link2, LayoutDashboard, LogIn, UserPlus } from "lucide-react";
+import { Sun, Moon, Menu, X, Link2, LayoutDashboard, LogIn, UserPlus, Shield, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useAuthContext } from "@/context/AuthContext";
 
 interface NavItem {
   label: string;
   href: string;
   icon?: React.ReactNode;
   authRequired?: boolean;
+  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
   { label: "Home", href: "/" },
   { label: "Shorten", href: "/shorten", icon: <Link2 className="w-4 h-4" />, authRequired: true },
-  { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" />, authRequired: true },
+  { label: "Admin", href: "/admin", icon: <Shield className="w-4 h-4" />, authRequired: true, adminOnly: true },
 ];
 
 export function Navbar() {
   const { theme, setTheme } = useTheme();
+  const { isAuthenticated, user, logout } = useAuthContext();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // Hydration fix - only render full navbar after mount
+  // This is a standard Next.js pattern for handling hydration mismatches
   useEffect(() => {
-    setMounted(true);
-    // Check for auth token
-    const token = localStorage.getItem("access_token");
-    setIsLoggedIn(!!token);
+    setMounted(true); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
 
+  const isLoggedIn = isAuthenticated;
+  const isAdmin = user?.is_admin || false;
+
+  // Return a skeleton during SSR to avoid hydration mismatch
   if (!mounted) {
-    return null;
+    return (
+      <nav className="fixed top-0 left-0 right-0 z-50 glass h-16" />
+    );
   }
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
+  };
+
+  const handleLogout = () => {
+    logout();
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -65,6 +76,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center space-x-4">
             {navItems.map((item) => {
               if (item.authRequired && !isLoggedIn) return null;
+              if (item.adminOnly && !isAdmin) return null;
               return (
                 <Link key={item.href} href={item.href}>
                   <motion.div
@@ -95,17 +107,22 @@ export function Navbar() {
                 </Link>
               </div>
             ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  localStorage.removeItem("access_token");
-                  setIsLoggedIn(false);
-                  window.location.href = "/";
-                }}
-              >
-                Logout
-              </Button>
+              <div className="flex items-center space-x-2">
+                <Link href="/dashboard">
+                  <Button variant="gradient" size="sm">
+                    <LayoutDashboard className="w-4 h-4 mr-1" />
+                    Dashboard
+                  </Button>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Logout
+                </Button>
+              </div>
             )}
 
             {/* Theme Toggle */}
@@ -154,6 +171,7 @@ export function Navbar() {
             <div className="flex flex-col space-y-2">
               {navItems.map((item) => {
                 if (item.authRequired && !isLoggedIn) return null;
+                if (item.adminOnly && !isAdmin) return null;
                 return (
                   <Link
                     key={item.href}
@@ -182,18 +200,22 @@ export function Navbar() {
                   </Link>
                 </>
               ) : (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    localStorage.removeItem("access_token");
-                    setIsLoggedIn(false);
-                    setMobileMenuOpen(false);
-                    window.location.href = "/";
-                  }}
-                >
-                  Logout
-                </Button>
+                <>
+                  <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="gradient" className="w-full">
+                      <LayoutDashboard className="w-4 h-4 mr-2" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </Button>
+                </>
               )}
             </div>
           </motion.div>

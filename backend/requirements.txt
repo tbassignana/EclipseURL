@@ -38,3 +38,8 @@ aiohttp>=3.9.1
 # Utilities
 python-dotenv>=1.0.0
 shortuuid>=1.0.11
+
+# Dev dependencies (for CI linting)
+ruff>=0.1.9
+black>=24.1.0
+isort>=5.13.2

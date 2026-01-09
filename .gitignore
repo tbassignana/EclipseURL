@@ -36,10 +36,16 @@ htmlcov/
 *.swp
 *.swo
 
-# Environment
+# Environment variables - CRITICAL: Never commit secrets
 .env
 .env.local
 .env.*.local
+.env.development
+.env.production
+.env.test
+.env.staging
+*.env
+!.env.example
 
 # Node.js
 node_modules/

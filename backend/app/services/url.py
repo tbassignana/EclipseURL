@@ -8,8 +8,9 @@ from bs4 import BeautifulSoup
 
 from app.core.config import settings
 from app.models.url import ShortURL
+from app.models.click import ClickLog
 from app.models.user import User
-from app.schemas.url import URLCreate, URLPreview
+from app.schemas.url import URLCreate, URLPreview, URLStats
 
 # Base62 character set for URL-safe short codes
 BASE62_CHARS = string.digits + string.ascii_lowercase + string.ascii_uppercase
@@ -162,3 +163,73 @@ async def delete_short_url(short_code: str, user: User) -> bool:
     short_url.updated_at = datetime.now(timezone.utc)
     await short_url.save()
     return True
+
+
+async def get_url_stats(short_url: ShortURL) -> URLStats:
+    """Get detailed statistics for a shortened URL."""
+    url_id = str(short_url.id)
+    # Use timezone-naive UTC to match ClickLog.timestamp format
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
+
+    # Get all clicks for this URL
+    all_clicks = await ClickLog.find({"short_url_id": url_id}).to_list()
+
+    # Calculate basic stats
+    total_clicks = len(all_clicks)
+    clicks_today = sum(1 for c in all_clicks if c.timestamp >= today_start)
+    clicks_this_week = sum(1 for c in all_clicks if c.timestamp >= week_start)
+
+    # Aggregate referrers
+    referrer_counts: dict[str, int] = {}
+    for click in all_clicks:
+        ref = click.referrer or "Direct"
+        referrer_counts[ref] = referrer_counts.get(ref, 0) + 1
+    top_referrers = [
+        {"referrer": k, "count": v}
+        for k, v in sorted(referrer_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    ]
+
+    # Aggregate by country
+    country_counts: dict[str, int] = {}
+    for click in all_clicks:
+        country = click.country or "Unknown"
+        country_counts[country] = country_counts.get(country, 0) + 1
+    clicks_by_country = [
+        {"country": k, "count": v}
+        for k, v in sorted(country_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    ]
+
+    # Aggregate by device
+    device_counts: dict[str, int] = {}
+    for click in all_clicks:
+        device = click.device_type or "Unknown"
+        device_counts[device] = device_counts.get(device, 0) + 1
+    clicks_by_device = [
+        {"device": k, "count": v}
+        for k, v in sorted(device_counts.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+    # Clicks over time (last 7 days)
+    clicks_over_time = []
+    for i in range(7):
+        day = today_start - timedelta(days=6-i)
+        day_end = day + timedelta(days=1)
+        day_clicks = sum(1 for c in all_clicks if day <= c.timestamp < day_end)
+        clicks_over_time.append({
+            "date": day.strftime("%b %d"),
+            "count": day_clicks
+        })
+
+    return URLStats(
+        short_code=short_url.short_code,
+        original_url=short_url.original_url,
+        total_clicks=total_clicks,
+        clicks_today=clicks_today,
+        clicks_this_week=clicks_this_week,
+        top_referrers=top_referrers,
+        clicks_by_country=clicks_by_country,
+        clicks_by_device=clicks_by_device,
+        clicks_over_time=clicks_over_time
+    )

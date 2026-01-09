@@ -4,13 +4,14 @@ from slowapi.util import get_remote_address
 
 from app.core.config import settings
 from app.core.security import get_current_user
-from app.schemas.url import URLCreate, URLResponse, URLPreview
+from app.schemas.url import URLCreate, URLResponse, URLPreview, URLStats
 from app.services.url import (
     create_short_url,
     get_short_url_by_code,
     get_user_urls,
     delete_short_url,
-    fetch_url_preview as fetch_preview_service
+    fetch_url_preview as fetch_preview_service,
+    get_url_stats
 )
 from app.models.user import User
 
@@ -89,6 +90,34 @@ async def get_url_preview(url: str):
     """
     preview = await fetch_preview_service(url)
     return preview
+
+
+@router.get("/{short_code}/stats", response_model=URLStats)
+async def get_url_statistics(
+    short_code: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get detailed statistics for a shortened URL.
+    """
+    short_url = await get_short_url_by_code(short_code)
+
+    if not short_url or not short_url.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="URL not found"
+        )
+
+    # Verify ownership (unless admin)
+    if not current_user.is_admin:
+        await short_url.fetch_link(ShortURL.user)
+        if short_url.user.id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to access this URL"
+            )
+
+    return await get_url_stats(short_url)
 
 
 @router.get("/{short_code}", response_model=URLResponse)
