@@ -61,5 +61,8 @@ async def health_check():
 
 
 # Import and include routers
-from app.api import auth
+from app.api import auth, urls, redirect
 app.include_router(auth.router, prefix=settings.API_V1_STR)
+app.include_router(urls.router, prefix=settings.API_V1_STR)
+# Redirect router at root level for short URLs
+app.include_router(redirect.router)
